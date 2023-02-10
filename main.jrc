@@ -1,0 +1,112 @@
+
+#include <WiFi.h>
+#include <HTTPClient.h>
+
+const char* ssid     = "JRC222";
+const char* password = "juniourrobotics222club";
+
+const char* SERVER_NAME = "http://jrc.captainelectronicsbd.com/projects/inoutcounter/main/data.php";
+
+unsigned long previousMillis = 0;
+long interval = 3000;
+
+
+
+const int insens = 5;
+const int outsens = 18;
+int incount;
+int outcount;
+
+
+ 
+void setup() {
+ Serial.begin(9600);
+ 
+  pinMode(insens, INPUT_PULLUP); 
+  pinMode(outsens, INPUT_PULLUP);
+
+  WiFi.begin(ssid, password);
+  Serial.println("Connecting");
+  while(WiFi.status() != WL_CONNECTED) { 
+    delay(500);
+    Serial.print(".");
+  }
+  Serial.println("");
+  Serial.print("Connected to WiFi network with IP Address: ");
+  Serial.println(WiFi.localIP());
+
+}
+ 
+void loop() {
+
+     int in = digitalRead(insens);
+     int out = digitalRead(outsens);
+if(in == 0)
+{
+  incount = 1;  
+  outcount = 0;
+}else if(out == 0)
+{
+    incount = 0;
+    outcount = 1;
+      
+}
+else{
+  
+      incount = 0;
+    outcount = 0;
+  }
+Serial.print(incount);
+Serial.println(outcount);
+     
+
+     int totalcount = 20;
+ 
+      if(WiFi.status()== WL_CONNECTED){
+    unsigned long currentMillis = millis();
+    if(currentMillis - previousMillis > interval) {
+       previousMillis = currentMillis;
+       //Send an HTTP POST request every 30 second
+    HTTPClient http;
+
+  
+     
+    http.begin(SERVER_NAME);
+    http.addHeader("Content-Type", "application/x-www-form-urlencoded");
+  String total, increment, decrement;
+     total = String(totalcount);
+     increment = String(incount);
+     decrement = String(outcount);
+     
+     
+     
+    String data;
+    data = "total="+total;
+    data += "&increment="+increment;
+    data += "&decrement="+decrement;
+   
+    
+    Serial.print("data: ");
+   Serial.println(data);
+    int httpResponseCode = http.POST(data);
+    String httpResponseString = http.getString();
+  
+    if (httpResponseCode>0) {
+      Serial.print("HTTP Response code: ");
+      Serial.println(httpResponseCode);
+      Serial.println(httpResponseString);
+    }
+
+    else {
+      Serial.print("Error on HTTP request - Error code: ");
+      Serial.println(httpResponseCode);
+      Serial.println(httpResponseString);
+    }
+    http.end();
+    }
+  }
+  else {
+    Serial.println("WiFi Disconnected");
+  }
+  delay(1000);  
+}
